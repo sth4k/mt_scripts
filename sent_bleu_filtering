@@ -1,0 +1,48 @@
+""" Script to compute sentence-wise blue score and filter out low score sentences
+python: 3.6.3
+usage #1: python bleu_filter.py --syn_src <...> --syn_tgt <...> --real_tgt <...> --slb 0.3 --syn_src_out <...> --real_tgt_out <...>
+usage #2: python bleu_filter.py --syn_src <...> --syn_tgt <...> --real_tgt <...> --topk 1 --k 1000 --syn_src_out <...> --real_tgt_out <...>
+"""
+
+import codecs
+import argparse
+
+from nltk.tokenize import word_tokenize
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--syn_src')
+parser.add_argument('--syn_tgt')
+parser.add_argument('--real_tgt')
+parser.add_argument('--slb', type=float, default=0.2)
+parser.add_argument('--topk', type=int, default=0)
+parser.add_argument('--k', type=int, default=10000)
+parser.add_argument('--syn_src_out')
+parser.add_argument('--real_tgt_out')
+args = parser.parse_args()
+
+
+def get_tokens(file_path):
+    with codecs.open(file_path, 'r', 'utf-8') as f:
+        return [word_tokenize(l) for l in f]
+
+def filter_lines(file_path, line_nums, new_file_path):
+    lines = codecs.open(file_path, 'r', 'utf-8').readlines()
+    with codecs.open(new_file_path, 'w', 'utf-8') as f:
+        for n in line_nums:
+            f.write(lines[n])
+
+if __name__ == "__main__":
+    sf = SmoothingFunction()
+    res = []
+    for i, (reference_line, translation_line) in enumerate(zip(get_tokens(args.syn_tgt), get_tokens(args.real_tgt))):
+        blue = sentence_bleu([reference_line], translation_line, smoothing_function=sf.method3)
+        res.append((blue, i))
+    
+    if args.topk:
+        line_nums = [i for _, i in sorted(res, reverse=True)[:args.k]]
+    else:
+        line_nums = [i for b, i in res if b >= args.slb ]
+    
+    filter_lines(args.syn_src, line_nums, args.syn_src_out)
+    filter_lines(args.real_tgt, line_nums, args.real_tgt_out)
