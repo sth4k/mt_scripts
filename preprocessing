@@ -1,0 +1,5 @@
+# deduplicate
+paste /path/to/datadir/train.$src /path/to/datadir/train.$tgt | awk '!x[$0]++' > /path/to/datadir/train.dedup
+echo "keeping $(wc -l /path/to/datadir/train.dedup) bitext out of $(wc -l /path/to/datadir/train.$src)"
+cut -f1 /path/to/datadir/train.dedup > /path/to/datadir/train.$src
+cut -f2 /path/to/datadir/train.dedup > /path/to/datadir/train.$tgt
