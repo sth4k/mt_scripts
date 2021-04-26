@@ -1,0 +1,32 @@
+## train the language model
+
+stage=0
+TRAIN_CORPUS=~/zh_tw-en-202102/OpenSubtitles.clean.en-zh_tw.en
+
+if [ $stage -le '0' ]; then
+    spm_train --input=$TRAIN_CORPUS --model_prefix=open-lm --vocab_size=1000 --character_coverage=1.0 --model_type=bpe
+fi
+
+if [ $stage -le '1' ]; then
+    spm_encode --model=open-lm.model --output_format=piece < $TRAIN_CORPUS > OpenSubtitles.en.bpe
+fi
+
+if [ $stage -le '2' ]; then
+    ~/machine_translation/kenlm/build/bin/lmplz -o 5 <OpenSubtitles.en.bpe >OpenSubtitles.en.arpa
+fi
+
+
+## use the trained LM to score sents
+# binarize the file and it will be runned faster
+bin/build_binary -s OpenSubtitles.en.arpa OpenSubtitles.en.bin
+import kenlm
+model = kenlm.Model('OpenSubtitles.en.bin')
+print(model.score('this is a sentence.',bos = True,eos = True))
+
+
+
+[ref]
+1. https://www.cnblogs.com/zidiancao/p/6067147.html
+2. https://blog.csdn.net/Nicholas_Wong/article/details/80013547
+3. https://blog.csdn.net/benbenls/article/details/102898960
+4. https://blog.csdn.net/a635661820/article/details/43906731
